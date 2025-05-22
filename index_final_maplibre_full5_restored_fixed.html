@@ -447,9 +447,8 @@ map.scrollZoom.setWheelZoomRate(1/6000);
 map.on('load', () => {
   map.addSource('lfll', {
     type: 'geojson',
-    data: 'export.geojson'  // <- ou lfll.json si tu le renommes
+    data: 'export.geojson'
   });
-
 // ==================== CHARGEMENT DES COUCHES CARTE ====================
 map.on('load', () => {
   map.addSource('lfll', {
