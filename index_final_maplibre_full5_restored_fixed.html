@@ -495,6 +495,26 @@ map.on('load', () => {
 }); // ← ICI tu fermes la fonction !
 
 
+    // ============ DYNAMIQUE DES LARGEURS ============
+function computeLineWidth(baseWidth, zoomLevel) {
+  const zoomRef = 14.0;
+  return baseWidth * Math.pow(2, zoomLevel - zoomRef);
+}
+
+function updateMainLineWidths() {
+  const z = map.getZoom();
+  if (map.getLayer('runways')) map.setPaintProperty('runways', 'line-width', computeLineWidth(12, z));
+  if (map.getLayer('taxiways')) map.setPaintProperty('taxiways', 'line-width', computeLineWidth(8, z));
+}
+
+function updateInsetLineWidths(mainZoom, insetZoom) {
+  const zoomRatio = Math.pow(2, insetZoom - mainZoom);
+  const runwayWidth = Math.round(12 * zoomRatio);
+  const taxiwayWidth = Math.round(8 * zoomRatio);
+  if (insetMapRef?.getLayer('inset-runways')) insetMapRef.setPaintProperty('inset-runways', 'line-width', runwayWidth);
+  if (insetMapRef?.getLayer('inset-taxiways')) insetMapRef.setPaintProperty('inset-taxiways', 'line-width', taxiwayWidth);
+}
+
 // ==================== ÉTAT DE LA CARTE ====================
 function updateMapState() {
   document.getElementById("zoomVal").textContent = map.getZoom().toFixed(2);
