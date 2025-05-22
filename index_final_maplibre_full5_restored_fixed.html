@@ -442,14 +442,11 @@ map.addControl(new maplibregl.NavigationControl({
 }), 'top-left');
 
 map.scrollZoom.setWheelZoomRate(1/6000);
-map.on('zoom', updateMainLineWidths);
 map.on('load', () => {
   map.addSource('lfll', {
     type: 'geojson',
     data: 'export.geojson'
-  }
-);
-
+  });
   
     
   map.addLayer({
