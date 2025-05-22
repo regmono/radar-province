@@ -364,7 +364,7 @@
 let geojsonData = null;  // Stockage global pour la donnée GeoJSON
 
 // ====== TÉLÉCHARGEMENT ET DÉMARRAGE ======
-fetch('export.geojson')
+fetch('merged.geojson')
   .then(r => r.json())
   .then(data => {
     geojsonData = data;
