@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>ATC Radar Vilnius Replica – Version Complète</title>
+<style>
+    @font-face {
+      font-family: 'Roboto Mono';
+      src: url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
+    }
+
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      background: #23272d; color: #f2f2f2;
+      font-family: 'Roboto Mono', monospace;
+    }
+    .atc-root {
+      display: flex; flex-direction: column;
+      height: 100vh; min-width: 1100px;
+    }
+
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #181c20; border-bottom: 2px solid #222;
+      padding: 0 20px; height: 40px;
+    }
+    .menu-bar {
+      display: flex; gap: 12px; font-size: 15px;
+    }
+    .menu-item {
+      cursor: pointer; padding: 5px;
+    }
+    .menu-item:hover {
+      background: #22324f; border-radius: 3px;
+    }
+    .status-bar {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px;
+    }
+    .status-bar .section-header-haut {
+      background: none; border: none; color: #ccc;
+      font-weight: normal; position: relative; padding: 0 4px;
+    }
+    .status-bar .section-header-haut:not(:last-child)::after {
+      content: "|"; color: #666;
+      position: absolute; right: 0; top: 0;
+    }
+    .status-bar .app-name {
+      color: #a0b8c8; font-weight: 600;
+      margin: 0 12px;
+    }
+    .status-bar .alarm {
+      color: #fd3a3a; font-weight: bold;
+    }
+    .status-bar .clock {
+      font-family: 'Roboto Mono', monospace; font-size: 15px;
+    }
+
+    .tool-bar-configurable {
+      display: flex; padding: 5px;
+      background: #444; border-bottom: 1px solid #555;
+    }
+    .tool-bar-configurable img {
+      height: 30px;
+    }
+
+    .radar-container {
+      display: flex; 
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .radar-view {
+      flex: 1;
+      position: relative;
+      min-width: 300px;
+    }
+
+    .resize-handle {
+      width: 6px;
+      background-color: #555;
+      cursor: ew-resize;
+      flex-shrink: 0;
+      transition: background-color 0.2s;
+    }
+
+    .resize-handle:hover {
+      background-color: #777;
+    }
+
+    .side-panel {
+      width: 400px;
+      min-width: 200px;
+      max-width: 800px;
+      background: #23272d;
+      border-left: 2px solid #555;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: #505050; padding: 3px 5px;
+      font-size: 12px; color: #ccc;
+      flex-shrink: 0;
+    }
+    .section-content {
+      flex: 1; overflow-y: auto;
+      padding: 5px; border-bottom: 1px solid #555;
+      font-size: 14px;
+    }
+
+    .flight-strip {
+      background: #f1f1f1; color: #000;
+      margin: 3px; padding: 3px;
+      font-size: 12px; cursor: move;
+      border: 1px solid #aaa;
+      width: 85%;
+      user-select: none;
+    }
+    .flight-strip.selected {
+      background: #fffa90;
+      border: 2px solid #f4f15a;
+    }
+    .dropzone {
+      min-height: 30px; border: 1px dashed #777; padding: 2px;
+    }
+    .dropzone.dragover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .flight-strip.airborne {
+      display: grid; 
+      width: 95%; 
+      height: 60px;
+      background: #F1F1F1; border: 1px solid #000;
+      font: 12px 'Roboto Mono', monospace; color: #000;
+      user-select: none; cursor: move;
+      grid-template-columns: 80px 80px 180px 50px 50px 110px 30px;
+      max-width: 580px;
+    }
+    .flight-strip.airborne > div {
+      display: flex; flex-direction: column;
+    }
+    .col-runway > * {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .col-runway > .runway {
+      justify-content: flex-start; padding-left: 4px;
+      font-size: 14px; font-weight: 500;
+    }
+    .col-depdest > * {
+      flex: 1; display: flex; align-items: center; justify-content: flex-start;
+      padding-left: 4px;
+    }
+    .col-cs > .callsign-yellow {
+      flex: 2; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #F4F15A;
+    }
+    .col-cs .cs-code {
+      font-size: 16px; font-weight: 500;
+    }
+    .col-cs .cs-type {
+      font-size: 10px; margin-top: 2px;
+    }
+    .col-cs > .route-ext {
+      flex: 1; display: flex; align-items: center; justify-content: flex-start;
+      padding-left: 4px; font-size: 11px;
+    }
+    .col-lnd > .lnd {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      background: #D3D3D3;
+      border-left: 1px solid #888; border-right: 1px solid #888;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .col-act > .tgo, .col-act > .hnd {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      background: #D3D3D3;
+      border-left: 1px solid #888; border-right: 1px solid #888;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .col-act > .hnd {
+      border-top: 1px solid #888;
+    }
+    .col-times {
+      display: flex; align-items: flex-end; justify-content: flex-end;
+    }
+    .col-times > .time {
+      font-size: 14px; padding-right: 4px;
+    }
+    .col-refresh {
+      display: flex; align-items: flex-start; justify-content: center;
+    }
+    .col-refresh > .refresh {
+      font-size: 18px; cursor: pointer;
+    }
+
+    #radar-config-selector {
+      position: absolute;
+      top: 46px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      color: white;
+      font-size: 13px;
+      z-index: 1000;
+    }
+
+    #radar-config-selector label {
+      display: inline-block;
+      width: 80px;
+      margin-right: 5px;
+    }
+
+    #radar-config-selector select {
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      margin-bottom: 5px;
+      padding: 2px;
+    }
+
+    #radar-config-selector button {
+      background: #444;
+      color: white;
+      border: 1px solid #666;
+      padding: 4px 8px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+
+    #radar-config-selector button:hover {
+      background: #555;
+    }
+
+    #insetMap {
+      border: 2px solid #ccc;
+      background: #000;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+
+    #mapState {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      border-radius: 4px;
+      z-index: 999;
+    }
+</style>
+<link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet"/>
+</head>
+<body class="atc-root">
+
+<div id="mapState">
+  <div>Zoom: <span id="zoomVal">-</span></div>
+  <div>Center: <span id="centerVal">-</span></div>
+  <div>Bearing: <span id="bearingVal">-</span></div>
+  <div>Panel Width: <span id="panelWidth">400</span>px</div>
+</div>
+
+<div class="top-bar">
+<div class="menu-bar">
+<div class="menu-item">Display</div>
+<div class="menu-item">Maps</div>
+<div class="menu-item">Windows</div>
+<div class="menu-item">Colours</div>
+<div class="menu-item">Target</div>
+<div class="menu-item">Sensor</div>
+<div class="menu-item">Alerts</div>
+<div class="menu-item">User</div>
+</div>
+<div class="status-bar">
+<div class="section-header-haut">Piste 35L fermée  </div>
+<div class="section-header-haut">Mono VMC  </div>
+<div class="section-header-haut">↓ 35R  </div>
+<div class="section-header-haut">↑ 35R  </div>
+<div class="section-header-haut">ATIS W  </div>
+<div class="section-header-haut">1013 Auto  </div>
+<div class="app-name">APP GEC TEC</div>
+<div class="alarm">Alarm: Many errors</div>
+<div class="clock">12:44:50</div>
+</div>
+</div>
+
+<div class="tool-bar-configurable">
+<img alt="Configurable toolbar" src="data:image/svg+xml,%3Csvg width='30' height='30' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='30' height='30' fill='%23666'/%3E%3Ctext x='15' y='20' text-anchor='middle' fill='white' font-size='12'%3E≡%3C/text%3E%3C/svg%3E"/>
+</div>
+
+<div id="radar-config-selector">
+  <label for="terrainSelect">Terrain :</label>
+  <select id="terrainSelect">
+    <option value="lfll">LFLL</option>
+    <option value="lfmn">LFMN</option>
+    <option value="lfml">LFML</option>
+    <option value="lfsb">LFSB</option>
+    <option value="lfbo">LFBO</option>
+  </select>
+  <br>
+  <label for="confSelect">Configuration :</label>
+  <select id="confSelect"></select>
+  <br>
+  
+  <label for="insetViewSelect">Inset :</label>
+  <select id="insetViewSelect">
+    <option value="no">Non</option>
+    <option value="yes">Oui</option>
+  </select>
+  <br>
+  <button id="saveConf">+ Sauver configuration</button>
+</div>
+
+<div class="radar-container">
+  <div class="radar-view" id="map"></div>
+  <div class="resize-handle" id="resizeHandle"></div>
+  <div class="side-panel" id="sidePanel">
+    <div class="section-header">Dashboard</div>
+    <div class="section-content">EFS</div>
+    
+    <div class="section-header">Airborne</div>
+    <div class="section-content dropzone" id="airborne">
+      <div class="flight-strip airborne" draggable="true" id="strip-AFR78QJ">
+        <div class="col-runway">
+          <div class="runway">&gt;</div>
+          <div class="runway">▼</div>
+          <div class="runway"><strong>35R</strong></div>
+        </div>
+        <div class="col-depdest">
+          <div class="departure">LFPG</div>
+          <div class="destination">LFLL</div>
+        </div>
+        <div class="col-cs">
+          <div class="callsign-yellow">
+            <div class="cs-code"><strong>AFR78QJ</strong></div>
+            <div class="cs-type">A320 M | D63</div>
+          </div>
+          <div class="route-ext">TALAR LL504</div>
+        </div>
+        <div class="col-lnd">
+          <div class="lnd">LND</div>
+        </div>
+        <div class="col-act">
+          <div class="tgo">T-GO</div>
+          <div class="hnd">HND</div>
+        </div>
+        <div class="col-times">
+          <div class="time">0660 <strong>0734</strong></div>
+        </div>
+        <div class="col-refresh">
+          <div class="refresh">⟳</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section-header">Runway</div>
+    <div class="section-content dropzone" id="runway"></div>
+    
+    <div class="section-header">Ground</div>
+    <div class="section-content dropzone" id="ground"></div>
+    
+    <div class="section-header">Pending Arrivals</div>
+    <div class="section-content dropzone" id="pending">
+      <div class="flight-strip" draggable="true">AUI183 EYM 0729</div>
+      <div class="flight-strip" draggable="true">RYR62KZ EYM 0742</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+<script>
+// ==================== DRAG & DROP ET HORLOGE ====================
+function dragStart(e) {
+  e.dataTransfer.setData('text/plain', e.target.id);
+  e.target.classList.add('selected');
+}
+function dragEnd(e) {
+  e.target.classList.remove('selected');
+}
+document.querySelectorAll('.flight-strip').forEach((strip, i) => {
+  strip.id = strip.id || 'strip-' + i;
+  strip.addEventListener('dragstart', dragStart);
+  strip.addEventListener('dragend', dragEnd);
+  strip.addEventListener('click', () => {
+    document.querySelectorAll('.flight-strip').forEach(s => s.classList.remove('selected'));
+    strip.classList.add('selected');
+  });
+});
+document.querySelectorAll('.dropzone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    const id = e.dataTransfer.getData('text/plain');
+    zone.appendChild(document.getElementById(id));
+  });
+});
+
+function updateClock() {
+  const now = new Date();
+  document.querySelector('.clock').textContent =
+    now.toLocaleTimeString('en-GB', { hour12:false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ==================== MAPLIBRE PRINCIPALE ====================
+const map = new maplibregl.Map({
+  container: 'map',
+  style: {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: "background",
+        type: "background",
+        paint: {
+          "background-color": "#000000"
+        }
+      }
+    ]
+  },
+  center: [5.081, 45.725],
+  zoom: 15,
+  bearing: 0,
+  pitch: 0,
+  attributionControl: false
+});
+
+map.addControl(new maplibregl.NavigationControl({
+  showCompass: true,
+  showZoom: false
+}), 'top-left');
+
+map.scrollZoom.setWheelZoomRate(1/6000);
+
+// ==================== DONNÉES GEOJSON ====================
+// COLLEZ VOS DONNÉES GEOJSON ICI - REMPLACEZ LE CONTENU DE LA VARIABLE geojsonData
+const geojsonData = {
+  "type": "FeatureCollection",
+  "generator": "overpass-turbo",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+  "timestamp": "2025-05-20T11:24:59Z",
+  "features": [
+    // AJOUTEZ VOS FEATURES GEOJSON ICI
+    {
+      "type": "Feature",
+      "properties": {
+        "aeroway": "runway",
+        "name": "35R/17L"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [5.081, 45.725],
+          [5.081, 45.730]
+        ]
+      }
+    }
+  ]
+};
+
+// ==================== CHARGEMENT DES COUCHES CARTE ====================
+map.on('load', () => {
+  map.addSource('lfll', {
+    type: 'geojson',
+    data: geojsonData
+  });
+
+  map.addLayer({
+    id: 'runways',
+    type: 'line',
+    source: 'lfll',
+    filter: ['==', 'aeroway', 'runway'],
+    paint: { 'line-color': '#646464', 'line-width': 12 }
+  });
+
+  map.addLayer({
+    id: 'taxiways',
+    type: 'line',
+    source: 'lfll',
+    filter: ['==', 'aeroway', 'taxiway'],
+    paint: { 'line-color': '#646464', 'line-width': 8 }
+  });
+
+  map.addLayer({
+    id: 'aprons',
+    type: 'fill',
+    source: 'lfll',
+    filter: ['==', 'aeroway', 'apron'],
+    paint: { 'fill-color': '#AAAAAA', 'fill-opacity': 0.4 }
+  });
+
+  map.addLayer({
+    id: 'terminals',
+    type: 'fill',
+    source: 'lfll',
+    filter: ['==', 'aeroway', 'terminal'],
+    paint: { 'fill-color': '#00FF00', 'fill-opacity': 0.5 }
+  });
+
+  map.addLayer({
+    id: 'labels',
+    type: 'symbol',
+    source: 'lfll',
+    layout: {
+      'text-field': ['coalesce', ['get', 'name'], ['get', 'ref']],
+      'text-font': ['Open Sans Regular'],
+      'text-size': 12
+    },
+    paint: { 'text-color': '#FFFFFF' }
+  });
+});
+
+// ==================== ÉTAT DE LA CARTE ====================
+function updateMapState() {
+  document.getElementById("zoomVal").textContent = map.getZoom().toFixed(2);
+  const center = map.getCenter();
+  document.getElementById("centerVal").textContent = `[${center.lng.toFixed(5)}, ${center.lat.toFixed(5)}]`;
+  document.getElementById("bearingVal").textContent = map.getBearing().toFixed(1) + '°';
+  document.getElementById("panelWidth").textContent = document.getElementById('sidePanel').offsetWidth;
+}
+
+map.on('moveend', updateMapState);
+map.on('zoomend', updateMapState);
+map.on('rotateend', updateMapState);
+updateMapState();
+
+// ==================== ROTATION AVEC CLIC DROIT + MOLETTE ====================
+let rightClickPressed = false;
+
+document.addEventListener("mousedown", (e) => {
+  if (e.button === 2) {
+    rightClickPressed = true;
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  rightClickPressed = false;
+});
+
+document.addEventListener("wheel", (e) => {
+  // Pour la carte inset
+  const inset = document.getElementById('insetMap');
+  if (inset && e.target.closest('#insetMap') === inset) {
+    if (insetMapRef) {
+      if (rightClickPressed) {
+        e.preventDefault();
+        const delta = e.deltaY;
+        const rotationAmount = delta > 0 ? 0.5 : -0.5;
+        insetMapRef.setBearing(insetMapRef.getBearing() + rotationAmount);
+      } else {
+        e.preventDefault();
+        const zoomFactor = e.deltaY > 0 ? -0.2 : 0.2;
+        insetMapRef.setZoom(insetMapRef.getZoom() + zoomFactor);
+      }
+    }
+    return;
+  }
+
+  // Pour la carte principale
+  if (rightClickPressed) {
+    e.preventDefault();
+    const delta = e.deltaY;
+    const currentBearing = map.getBearing();
+    const sensitivity = 0.2;
+    const newBearing = currentBearing + (delta > 0 ? sensitivity : -sensitivity);
+    map.setBearing(newBearing);
+  }
+}, { passive: false });
+
+// ==================== RESIZE DU SIDE PANEL ====================
+let isResizing = false;
+
+document.getElementById('resizeHandle').addEventListener('mousedown', function(e) {
+  e.preventDefault();
+  isResizing = true;
+  document.body.style.cursor = 'ew-resize';
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', function(e) {
+  if (!isResizing) return;
+  
+  const container = document.querySelector('.radar-container');
+  const sidePanel = document.getElementById('sidePanel');
+  
+  const containerRect = container.getBoundingClientRect();
+  const mouseX = e.clientX;
+  const containerRight = containerRect.right;
+  
+  let newWidth = containerRight - mouseX;
+  const minWidth = 200;
+  const maxWidth = 800;
+  newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+  
+  sidePanel.style.width = newWidth + 'px';
+  document.getElementById("panelWidth").textContent = newWidth;
+  
+  if (currentTerrain && confSelect && confSelect.value) {
+    const conf = radarConfs[currentTerrain][confSelect.value];
+    if (conf) {
+      conf.sidePanelWidth = newWidth;
+      localStorage.setItem('radarConfs', JSON.stringify(radarConfs));
+    }
+  }
+  
+  requestAnimationFrame(() => {
+    map.resize();
+  });
+});
+
+document.addEventListener('mouseup', function() {
+  if (isResizing) {
+    isResizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
+
+document.addEventListener('selectstart', function(e) {
+  if (isResizing) {
+    e.preventDefault();
+  }
+});
+
+// ==================== SYSTÈME DE CONFIGURATIONS RADAR ====================
+const defaultRadarConfs = {
+  lfll: {
+    LOC1: {
+      mainView: "air",
+      mainParams: { center: [5.09849, 45.72924], zoom: 13.52, bearing: 85.2 },
+      insetView: "sol",
+      insetParams: { center: [5.09100, 45.72800], zoom: 14.2, bearing: 190.0 },
+      insetStyle: { width: "300px", height: "200px", left: "100px", top: "100px" },
+      sidePanelWidth: 400
+    }
+  },
+  lfmn: {}, lfml: {}, lfsb: {}, lfbo: {}
+};
+
+const radarConfs = JSON.parse(localStorage.getItem('radarConfs')) || defaultRadarConfs;
+let currentTerrain = localStorage.getItem('selectedTerrain') || 'lfll';
+let insetMapRef = null;
+
+const terrainSelect = document.getElementById('terrainSelect');
+const confSelect = document.getElementById('confSelect');
+const mainViewSelect = document.getElementById('mainViewSelect');
+const insetViewSelect = document.getElementById('insetViewSelect');
+const sidePanel = document.getElementById('sidePanel');
+
+function populateConfs(terrain) {
+  confSelect.innerHTML = '';
+  const confs = radarConfs[terrain] || {};
+  for (let name in confs) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    confSelect.appendChild(opt);
+  }
+}
+function applyConf(terrain, confName) {
+  const conf = radarConfs[terrain]?.[confName];
+  if (!conf) return;
+
+  insetViewSelect.value = conf.insetView === "yes" ? "yes" : "no";
+
+  if (conf.mainParams) {
+    map.jumpTo(conf.mainParams);
+  }
+
+  if (conf.sidePanelWidth && sidePanel) {
+    sidePanel.style.width = conf.sidePanelWidth + 'px';
+    requestAnimationFrame(() => { map.resize(); });
+  }
+
+  if (conf.insetView === 'yes') {
+    restoreInset(conf);
+  } else {
+    const inset = document.getElementById('insetMap');
+    if (inset) inset.style.display = 'none';
+  }
+
+  if (confSelect.value !== confName) {
+    confSelect.value = confName;
+  }
+}
+
+
+// ==================== FENÊTRE INSET ====================
+function createInset(view, style = {}) {
+  let inset = document.getElementById('insetMap');
+  if (!inset) {
+    inset = document.createElement('div');
+    inset.id = 'insetMap';
+    inset.style.position = 'absolute';
+    inset.style.resize = 'both';
+    inset.style.overflow = 'hidden';
+    inset.style.zIndex = '999';
+    inset.style.border = '2px solid #ccc';
+    inset.style.background = '#000';
+    inset.style.cursor = 'move';
+    document.body.appendChild(inset);
+    makeInsetDraggable(inset);
+  }
+
+  inset.style.display = 'block';
+  inset.style.width = style.width || '300px';
+  inset.style.height = style.height || '200px';
+  inset.style.left = style.left || '100px';
+  inset.style.top = style.top || '100px';
+
+  if (insetMapRef) insetMapRef.remove();
+
+  insetMapRef = new maplibregl.Map({
+    container: 'insetMap',
+    style: {
+      version: 8,
+      sources: {},
+      layers: [
+        {
+          id: "background",
+          type: "background",
+          paint: {
+            "background-color": "#000000"
+          }
+        }
+      ]
+    },
+    center: view?.center || [5.081, 45.725],
+    zoom: view?.zoom || 15,
+    bearing: view?.bearing || 0,
+    pitch: 0,
+    attributionControl: false,
+    interactive: true
+  });
+
+  insetMapRef.on('load', () => {
+    addInsetLayers();
+  });
+
+  const resizeObserver = new ResizeObserver(() => {
+    insetMapRef.resize();
+  });
+  resizeObserver.observe(inset);
+}
+
+function addInsetLayers() {
+  if (!insetMapRef.getSource('lfll')) {
+    insetMapRef.addSource('lfll', {
+      type: 'geojson',
+      data: geojsonData
+    });
+  }
+
+  if (insetMapRef.getLayer('inset-runways')) {
+    insetMapRef.removeLayer('inset-runways');
+  }
+  if (insetMapRef.getLayer('inset-taxiways')) {
+    insetMapRef.removeLayer('inset-taxiways');
+  }
+
+  insetMapRef.addLayer({
+    id: 'inset-runways',
+    type: 'line',
+    source: 'lfll',
+    filter: ['==', 'aeroway', 'runway'],
+    paint: {
+      'line-color': '#646464',
+      'line-width': 12
+    }
+  });
+
+  insetMapRef.addLayer({
+    id: 'inset-taxiways',
+    type: 'line',
+    source: 'lfll',
+    filter: ['==', 'aeroway', 'taxiway'],
+    paint: {
+      'line-color': '#646464',
+      'line-width': 8
+    }
+  });
+}
+
+function makeInsetDraggable(el) {
+  let isDragging = false;
+  let offsetX, offsetY;
+  el.addEventListener('mousedown', function(e) {
+    if (e.target !== el) return;
+    isDragging = true;
+    offsetX = e.clientX - el.offsetLeft;
+    offsetY = e.clientY - el.offsetTop;
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    el.style.left = (e.clientX - offsetX) + 'px';
+    el.style.top = (e.clientY - offsetY) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    isDragging = false;
+  });
+}
+
+
+function restoreInset(conf) {
+  createInset(conf.insetParams, conf.insetStyle);
+}
+
+// ==================== EVENT LISTENERS POUR LES CONFIGURATIONS ====================
+terrainSelect.addEventListener('change', (e) => {
+  currentTerrain = e.target.value;
+  localStorage.setItem('selectedTerrain', currentTerrain);
+  populateConfs(currentTerrain);
+  const first = Object.keys(radarConfs[currentTerrain])[0];
+  if (first) applyConf(currentTerrain, first);
+});
+
+confSelect.addEventListener('change', (e) => {
+  applyConf(currentTerrain, e.target.value);
+});
+
+insetViewSelect.addEventListener('change', (e) => {
+  if (e.target.value === 'yes') {
+    // Créer l'inset avec des paramètres par défaut
+    createInset(
+      { center: [5.091, 45.728], zoom: 14.2, bearing: 190.0 },
+      { width: "300px", height: "200px", left: "100px", top: "100px" }
+    );
+  } else {
+    const inset = document.getElementById('insetMap');
+    if (inset) inset.style.display = 'none';
+  }
+});
+
+// ==================== REMPLACEMENT LISTENER '#saveConf' ====================
+document.getElementById('saveConf').addEventListener('click', () => {
+  const name = prompt("Nom de la configuration (ex: LOC2):");
+  if (!name) return;
+
+  const main = {
+    center: [map.getCenter().lng, map.getCenter().lat],
+    zoom: map.getZoom(),
+    bearing: map.getBearing()
+  };
+
+  let insetParams = null;
+  let insetStyle = null;
+  const inset = document.getElementById('insetMap');
+
+  if (insetViewSelect.value === 'yes' && insetMapRef && inset) {
+    insetParams = {
+      center: [insetMapRef.getCenter().lng, insetMapRef.getCenter().lat],
+      zoom: insetMapRef.getZoom(),
+      bearing: insetMapRef.getBearing()
+    };
+    insetStyle = {
+      width: inset.style.width,
+      height: inset.style.height,
+      left: inset.style.left,
+      top: inset.style.top
+    };
+  }
+
+  const sidePanelWidth = sidePanel.offsetWidth;
+
+  if (!radarConfs[currentTerrain]) radarConfs[currentTerrain] = {};
+  radarConfs[currentTerrain][name] = {
+    mainParams: main,
+    insetView: insetViewSelect.value,
+    insetParams: insetParams,
+    insetStyle: insetStyle,
+    sidePanelWidth: sidePanelWidth
+  };
+
+  localStorage.setItem('radarConfs', JSON.stringify(radarConfs));
+  populateConfs(currentTerrain);
+  confSelect.value = name;
+
+  alert(`Configuration "${name}" sauvegardée !`);
+});
+
+// ==================== INITIALISATION ====================
+terrainSelect.value = currentTerrain;
+populateConfs(currentTerrain);
+const defaultConf = Object.keys(radarConfs[currentTerrain])[0];
+if (defaultConf) {
+  confSelect.value = defaultConf;
+  applyConf(currentTerrain, defaultConf);
+}
+
+
+
+
+console.log('ATC Radar Interface chargé avec succès !');
+console.log('- Utilisez clic droit + molette pour faire tourner la carte');
+console.log('- Changez "Inset" sur AIR, SOL ou APRON pour voir la fenêtre inset');
+
+
+</script>
+
+</body>
+</html>
