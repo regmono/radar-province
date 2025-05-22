@@ -443,17 +443,10 @@ map.addControl(new maplibregl.NavigationControl({
 
 map.scrollZoom.setWheelZoomRate(1/6000);
 
-// ==================== DONNÉES GEOJSON ====================
 map.on('load', () => {
   map.addSource('lfll', {
     type: 'geojson',
     data: 'export.geojson'
-  });
-// ==================== CHARGEMENT DES COUCHES CARTE ====================
-map.on('load', () => {
-  map.addSource('lfll', {
-    type: 'geojson',
-    data: geojsonData
   });
 
   map.addLayer({
@@ -499,7 +492,8 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#FFFFFF' }
   });
-});
+}); // ← ICI tu fermes la fonction !
+
 
 // ==================== ÉTAT DE LA CARTE ====================
 function updateMapState() {
