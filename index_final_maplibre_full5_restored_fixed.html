@@ -444,30 +444,11 @@ map.addControl(new maplibregl.NavigationControl({
 map.scrollZoom.setWheelZoomRate(1/6000);
 
 // ==================== DONNÉES GEOJSON ====================
-// COLLEZ VOS DONNÉES GEOJSON ICI - REMPLACEZ LE CONTENU DE LA VARIABLE geojsonData
-const geojsonData = {
-  "type": "FeatureCollection",
-  "generator": "overpass-turbo",
-  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-  "timestamp": "2025-05-20T11:24:59Z",
-  "features": [
-    // AJOUTEZ VOS FEATURES GEOJSON ICI
-    {
-      "type": "Feature",
-      "properties": {
-        "aeroway": "runway",
-        "name": "35R/17L"
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [5.081, 45.725],
-          [5.081, 45.730]
-        ]
-      }
-    }
-  ]
-};
+map.on('load', () => {
+  map.addSource('lfll', {
+    type: 'geojson',
+    data: 'export.geojson'  // <- ou lfll.json si tu le renommes
+  });
 
 // ==================== CHARGEMENT DES COUCHES CARTE ====================
 map.on('load', () => {
