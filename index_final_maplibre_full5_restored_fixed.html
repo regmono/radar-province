@@ -448,9 +448,10 @@ map.on('load', () => {
     type: 'geojson',
     data: 'export.geojson'
   }
-  updateMainLineWidths();
 );
 
+  
+    
   map.addLayer({
     id: 'runways',
     type: 'line',
@@ -494,6 +495,7 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#FFFFFF' }
   });
+  updateMainLineWidths();  
 }); // ← ICI tu fermes la fonction !
 
 
