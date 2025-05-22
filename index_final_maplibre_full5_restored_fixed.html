@@ -442,12 +442,14 @@ map.addControl(new maplibregl.NavigationControl({
 }), 'top-left');
 
 map.scrollZoom.setWheelZoomRate(1/6000);
-
+map.on('zoom', updateMainLineWidths);
 map.on('load', () => {
   map.addSource('lfll', {
     type: 'geojson',
     data: 'export.geojson'
-  });
+  }
+  updateMainLineWidths();
+);
 
   map.addLayer({
     id: 'runways',
@@ -738,8 +740,12 @@ function createInset(view, style = {}) {
     interactive: true
   });
 
+  insetMapRef.on('zoom', () => {
+      updateInsetLineWidths(map.getZoom(), insetMapRef.getZoom());
+  });  
   insetMapRef.on('load', () => {
     addInsetLayers();
+    updateInsetLineWidths(map.getZoom(), insetMapRef.getZoom());
   });
 
   const resizeObserver = new ResizeObserver(() => {
