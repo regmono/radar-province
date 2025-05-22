@@ -18,7 +18,6 @@
       display: flex; flex-direction: column;
       height: 100vh; min-width: 1100px;
     }
-
     .top-bar {
       display: flex; align-items: center; justify-content: space-between;
       background: #181c20; border-bottom: 2px solid #222;
@@ -55,7 +54,6 @@
     .status-bar .clock {
       font-family: 'Roboto Mono', monospace; font-size: 15px;
     }
-
     .tool-bar-configurable {
       display: flex; padding: 5px;
       background: #444; border-bottom: 1px solid #555;
@@ -63,19 +61,16 @@
     .tool-bar-configurable img {
       height: 30px;
     }
-
     .radar-container {
       display: flex; 
       flex: 1;
       overflow: hidden;
     }
-
     .radar-view {
       flex: 1;
       position: relative;
       min-width: 300px;
     }
-
     .resize-handle {
       width: 6px;
       background-color: #555;
@@ -83,11 +78,9 @@
       flex-shrink: 0;
       transition: background-color 0.2s;
     }
-
     .resize-handle:hover {
       background-color: #777;
     }
-
     .side-panel {
       width: 400px;
       min-width: 200px;
@@ -99,7 +92,6 @@
       flex-shrink: 0;
       overflow: hidden;
     }
-
     .section-header {
       background: #505050; padding: 3px 5px;
       font-size: 12px; color: #ccc;
@@ -110,7 +102,6 @@
       padding: 5px; border-bottom: 1px solid #555;
       font-size: 14px;
     }
-
     .flight-strip {
       background: #f1f1f1; color: #000;
       margin: 3px; padding: 3px;
@@ -129,7 +120,6 @@
     .dropzone.dragover {
       background: rgba(255,255,255,0.2);
     }
-
     .flight-strip.airborne {
       display: grid; 
       width: 95%; 
@@ -198,7 +188,6 @@
     .col-refresh > .refresh {
       font-size: 18px; cursor: pointer;
     }
-
     #radar-config-selector {
       position: absolute;
       top: 46px;
@@ -211,13 +200,11 @@
       font-size: 13px;
       z-index: 1000;
     }
-
     #radar-config-selector label {
       display: inline-block;
       width: 80px;
       margin-right: 5px;
     }
-
     #radar-config-selector select {
       background: #333;
       color: white;
@@ -225,7 +212,6 @@
       margin-bottom: 5px;
       padding: 2px;
     }
-
     #radar-config-selector button {
       background: #444;
       color: white;
@@ -234,17 +220,14 @@
       cursor: pointer;
       margin-top: 5px;
     }
-
     #radar-config-selector button:hover {
       background: #555;
     }
-
     #insetMap {
       border: 2px solid #ccc;
       background: #000;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5);
     }
-
     #mapState {
       position: absolute;
       bottom: 10px;
@@ -378,6 +361,22 @@
 
 <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
 <script>
+let geojsonData = null;  // Stockage global pour la donnée GeoJSON
+
+// ====== TÉLÉCHARGEMENT ET DÉMARRAGE ======
+fetch('export.geojson')
+  .then(r => r.json())
+  .then(data => {
+    geojsonData = data;
+    startApp();
+  })
+  .catch(e => {
+    alert('Erreur chargement GeoJSON : ' + e);
+    throw e;
+  });
+
+function startApp() {
+
 // ==================== DRAG & DROP ET HORLOGE ====================
 function dragStart(e) {
   e.dataTransfer.setData('text/plain', e.target.id);
@@ -442,13 +441,14 @@ map.addControl(new maplibregl.NavigationControl({
 }), 'top-left');
 
 map.scrollZoom.setWheelZoomRate(1/6000);
+map.on('zoom', updateMainLineWidths);
+
 map.on('load', () => {
   map.addSource('lfll', {
     type: 'geojson',
-    data: 'export.geojson'
+    data: geojsonData // Ici, data déjà en mémoire !
   });
-  
-    
+
   map.addLayer({
     id: 'runways',
     type: 'line',
@@ -492,11 +492,11 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#FFFFFF' }
   });
-  updateMainLineWidths();  
-}); // ← ICI tu fermes la fonction !
 
+  updateMainLineWidths();
+});
 
-    // ============ DYNAMIQUE DES LARGEURS ============
+// ============ DYNAMIQUE DES LARGEURS ============
 function computeLineWidth(baseWidth, zoomLevel) {
   const zoomRef = 14.0;
   return baseWidth * Math.pow(2, zoomLevel - zoomRef);
@@ -508,12 +508,11 @@ function updateMainLineWidths() {
   if (map.getLayer('taxiways')) map.setPaintProperty('taxiways', 'line-width', computeLineWidth(8, z));
 }
 
-function updateInsetLineWidths(mainZoom, insetZoom) {
-  const zoomRatio = Math.pow(2, insetZoom - mainZoom);
-  const runwayWidth = Math.round(12 * zoomRatio);
-  const taxiwayWidth = Math.round(8 * zoomRatio);
-  if (insetMapRef?.getLayer('inset-runways')) insetMapRef.setPaintProperty('inset-runways', 'line-width', runwayWidth);
-  if (insetMapRef?.getLayer('inset-taxiways')) insetMapRef.setPaintProperty('inset-taxiways', 'line-width', taxiwayWidth);
+function updateInsetLineWidths(insetZoom) {
+  if (insetMapRef?.getLayer('inset-runways'))
+    insetMapRef.setPaintProperty('inset-runways', 'line-width', computeLineWidth(12, insetZoom));
+  if (insetMapRef?.getLayer('inset-taxiways'))
+    insetMapRef.setPaintProperty('inset-taxiways', 'line-width', computeLineWidth(8, insetZoom));
 }
 
 // ==================== ÉTAT DE LA CARTE ====================
@@ -561,7 +560,6 @@ document.addEventListener("wheel", (e) => {
     }
     return;
   }
-
   // Pour la carte principale
   if (rightClickPressed) {
     e.preventDefault();
@@ -585,22 +583,17 @@ document.getElementById('resizeHandle').addEventListener('mousedown', function(e
 
 document.addEventListener('mousemove', function(e) {
   if (!isResizing) return;
-  
   const container = document.querySelector('.radar-container');
   const sidePanel = document.getElementById('sidePanel');
-  
   const containerRect = container.getBoundingClientRect();
   const mouseX = e.clientX;
   const containerRight = containerRect.right;
-  
   let newWidth = containerRight - mouseX;
   const minWidth = 200;
   const maxWidth = 800;
   newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-  
   sidePanel.style.width = newWidth + 'px';
   document.getElementById("panelWidth").textContent = newWidth;
-  
   if (currentTerrain && confSelect && confSelect.value) {
     const conf = radarConfs[currentTerrain][confSelect.value];
     if (conf) {
@@ -608,7 +601,6 @@ document.addEventListener('mousemove', function(e) {
       localStorage.setItem('radarConfs', JSON.stringify(radarConfs));
     }
   }
-  
   requestAnimationFrame(() => {
     map.resize();
   });
@@ -621,7 +613,6 @@ document.addEventListener('mouseup', function() {
     document.body.style.userSelect = '';
   }
 });
-
 document.addEventListener('selectstart', function(e) {
   if (isResizing) {
     e.preventDefault();
@@ -649,7 +640,6 @@ let insetMapRef = null;
 
 const terrainSelect = document.getElementById('terrainSelect');
 const confSelect = document.getElementById('confSelect');
-const mainViewSelect = document.getElementById('mainViewSelect');
 const insetViewSelect = document.getElementById('insetViewSelect');
 const sidePanel = document.getElementById('sidePanel');
 
@@ -666,30 +656,24 @@ function populateConfs(terrain) {
 function applyConf(terrain, confName) {
   const conf = radarConfs[terrain]?.[confName];
   if (!conf) return;
-
   insetViewSelect.value = conf.insetView === "yes" ? "yes" : "no";
-
   if (conf.mainParams) {
     map.jumpTo(conf.mainParams);
   }
-
   if (conf.sidePanelWidth && sidePanel) {
     sidePanel.style.width = conf.sidePanelWidth + 'px';
     requestAnimationFrame(() => { map.resize(); });
   }
-
   if (conf.insetView === 'yes') {
     restoreInset(conf);
   } else {
     const inset = document.getElementById('insetMap');
     if (inset) inset.style.display = 'none';
   }
-
   if (confSelect.value !== confName) {
     confSelect.value = confName;
   }
 }
-
 
 // ==================== FENÊTRE INSET ====================
 function createInset(view, style = {}) {
@@ -707,15 +691,12 @@ function createInset(view, style = {}) {
     document.body.appendChild(inset);
     makeInsetDraggable(inset);
   }
-
   inset.style.display = 'block';
   inset.style.width = style.width || '300px';
   inset.style.height = style.height || '200px';
   inset.style.left = style.left || '100px';
   inset.style.top = style.top || '100px';
-
   if (insetMapRef) insetMapRef.remove();
-
   insetMapRef = new maplibregl.Map({
     container: 'insetMap',
     style: {
@@ -738,36 +719,31 @@ function createInset(view, style = {}) {
     attributionControl: false,
     interactive: true
   });
-
   insetMapRef.on('zoom', () => {
-      updateInsetLineWidths(map.getZoom(), insetMapRef.getZoom());
+      updateInsetLineWidths(insetMapRef.getZoom());
   });  
   insetMapRef.on('load', () => {
     addInsetLayers();
-    updateInsetLineWidths(map.getZoom(), insetMapRef.getZoom());
+    updateInsetLineWidths(insetMapRef.getZoom());
   });
-
   const resizeObserver = new ResizeObserver(() => {
     insetMapRef.resize();
   });
   resizeObserver.observe(inset);
 }
-
 function addInsetLayers() {
   if (!insetMapRef.getSource('lfll')) {
     insetMapRef.addSource('lfll', {
       type: 'geojson',
-      data: geojsonData
+      data: geojsonData  // On réutilise la variable globale déjà chargée
     });
   }
-
   if (insetMapRef.getLayer('inset-runways')) {
     insetMapRef.removeLayer('inset-runways');
   }
   if (insetMapRef.getLayer('inset-taxiways')) {
     insetMapRef.removeLayer('inset-taxiways');
   }
-
   insetMapRef.addLayer({
     id: 'inset-runways',
     type: 'line',
@@ -778,7 +754,6 @@ function addInsetLayers() {
       'line-width': 12
     }
   });
-
   insetMapRef.addLayer({
     id: 'inset-taxiways',
     type: 'line',
@@ -790,7 +765,6 @@ function addInsetLayers() {
     }
   });
 }
-
 function makeInsetDraggable(el) {
   let isDragging = false;
   let offsetX, offsetY;
@@ -809,8 +783,6 @@ function makeInsetDraggable(el) {
     isDragging = false;
   });
 }
-
-
 function restoreInset(conf) {
   createInset(conf.insetParams, conf.insetStyle);
 }
@@ -823,14 +795,11 @@ terrainSelect.addEventListener('change', (e) => {
   const first = Object.keys(radarConfs[currentTerrain])[0];
   if (first) applyConf(currentTerrain, first);
 });
-
 confSelect.addEventListener('change', (e) => {
   applyConf(currentTerrain, e.target.value);
 });
-
 insetViewSelect.addEventListener('change', (e) => {
   if (e.target.value === 'yes') {
-    // Créer l'inset avec des paramètres par défaut
     createInset(
       { center: [5.091, 45.728], zoom: 14.2, bearing: 190.0 },
       { width: "300px", height: "200px", left: "100px", top: "100px" }
@@ -845,17 +814,14 @@ insetViewSelect.addEventListener('change', (e) => {
 document.getElementById('saveConf').addEventListener('click', () => {
   const name = prompt("Nom de la configuration (ex: LOC2):");
   if (!name) return;
-
   const main = {
     center: [map.getCenter().lng, map.getCenter().lat],
     zoom: map.getZoom(),
     bearing: map.getBearing()
   };
-
   let insetParams = null;
   let insetStyle = null;
   const inset = document.getElementById('insetMap');
-
   if (insetViewSelect.value === 'yes' && insetMapRef && inset) {
     insetParams = {
       center: [insetMapRef.getCenter().lng, insetMapRef.getCenter().lat],
@@ -869,9 +835,7 @@ document.getElementById('saveConf').addEventListener('click', () => {
       top: inset.style.top
     };
   }
-
   const sidePanelWidth = sidePanel.offsetWidth;
-
   if (!radarConfs[currentTerrain]) radarConfs[currentTerrain] = {};
   radarConfs[currentTerrain][name] = {
     mainParams: main,
@@ -880,11 +844,9 @@ document.getElementById('saveConf').addEventListener('click', () => {
     insetStyle: insetStyle,
     sidePanelWidth: sidePanelWidth
   };
-
   localStorage.setItem('radarConfs', JSON.stringify(radarConfs));
   populateConfs(currentTerrain);
   confSelect.value = name;
-
   alert(`Configuration "${name}" sauvegardée !`);
 });
 
@@ -896,16 +858,10 @@ if (defaultConf) {
   confSelect.value = defaultConf;
   applyConf(currentTerrain, defaultConf);
 }
-
-
-
-
 console.log('ATC Radar Interface chargé avec succès !');
 console.log('- Utilisez clic droit + molette pour faire tourner la carte');
-console.log('- Changez "Inset" sur AIR, SOL ou APRON pour voir la fenêtre inset');
-
-
+console.log('- Changez "Inset" sur Oui pour voir la fenêtre inset');
+} // Fin de startApp()
 </script>
-
 </body>
 </html>
